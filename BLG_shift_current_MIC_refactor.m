@@ -52,6 +52,7 @@ tic;
     pars, model, nbands, Kx, Ky, Kz);
 toc;
 
+
 %% 3) 费米能、频率网格与展宽
 Ef = tbNLC.calculate_ef(Enk(:), 0.5); % 半填充示例
 kT = 0.0;          % eV, 0 表示 0K 阶跃分布
@@ -98,7 +99,7 @@ toc;
 eta_abc = result.eta_abc;     % 尺寸: 2 x 2 x 2 x Nw
 
 %% 6) 作图示例（可按你的单位制继续调整缩放因子）
-% plot_response_tensor(Eph_list, sigma_abc, 1e5, 'Shift Current \sigma_{abc}');
+plot_response_tensor(Eph_list, sigma_abc, 1e5, 'Shift Current \sigma_{abc}');
 plot_response_tensor(Eph_list, eta_abc, 1e-8, 'MIC Metric \eta_{abc}');
 
 %% 7) 保存结果（建议保留 out_nlc，便于后续排查数值细节）

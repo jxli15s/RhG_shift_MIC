@@ -15,8 +15,8 @@
 # Runtime outputs
 *.log
 *.mat
+outputs_hfmf/
 
 # Keep repository lightweight: ignore all local datasets by default
 data/**
 !data/README.md
-
