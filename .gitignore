@@ -17,6 +17,12 @@
 *.mat
 outputs_hfmf/
 
+# Python local env/cache
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
 # Keep repository lightweight: ignore all local datasets by default
 data/**
 !data/README.md
