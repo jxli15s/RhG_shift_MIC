@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+
+# MATLAB temporary / backup
+*.asv
+*.autosave
+*.m~
+*.tmp
+
+# Archives and large bundles
+*.tgz
+*.tar
+*.tar.gz
+
+# Runtime outputs
+*.log
+*.mat
+
+# Keep repository lightweight: ignore all local datasets by default
+data/**
+!data/README.md
+
