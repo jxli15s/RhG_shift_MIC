@@ -1,6 +1,10 @@
 clc;
 clear;
 
+% 是否返回调试中间量 out_nlc（会占用更多内存）
+% 环境变量控制: TBNLC_DEBUG_OUT=1 -> 开启
+collect_debug_out = strcmp(getenv('TBNLC_DEBUG_OUT'), '1');
+
 % 可选：清理并重启并行池（若无并行工具箱，自动退化为串行）
 p = gcp('nocreate');
 if ~isempty(p)
@@ -69,6 +73,7 @@ sigma_opts.symBC = true;
 sigma_opts.verbose = true;
 sigma_opts.doGaugeFix = true;
 sigma_opts.g_s = 1;
+sigma_opts.saveIntermediates = false;
 
 mic_opts = struct();
 mic_opts.band_list = 2:3;     % 给 MIC 用
@@ -78,6 +83,7 @@ mic_opts.verbose = true;
 mic_opts.doGaugeFix = true;
 mic_opts.g_s = 1;
 mic_opts.positiveDE = true;
+mic_opts.saveIntermediates = false;
 mic_opts.saveFullMN = false; % 若只关心最终响应，建议 false 以节省内存
 
 run_opts = struct();
@@ -90,22 +96,37 @@ run_opts.mic_opts = mic_opts;
 % 这是本次重构的核心：主文件不再直接维护大量局部函数，
 % 只保留“输入准备 + 调用 + 后处理”。
 tic;
-[result, out_nlc] = tbNLC.compute_nonlinear_conductivity_fromUE( ...
-    Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, run_opts);
+if collect_debug_out
+    [result, out_nlc] = tbNLC.compute_nonlinear_conductivity_fromUE( ...
+        Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, run_opts);
+else
+    result = tbNLC.compute_nonlinear_conductivity_fromUE( ...
+        Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, run_opts);
+end
 toc;
 
 % 按需取出响应张量
-% sigma_abc = result.sigma_abc; % 尺寸: 2 x 2 x 2 x Nw
-eta_abc = result.eta_abc;     % 尺寸: 2 x 2 x 2 x Nw
+sigma_abc = [];
+eta_abc = [];
+if isfield(result, 'sigma_abc')
+    sigma_abc = result.sigma_abc; % 尺寸: 2 x 2 x 2 x Nw
+end
+if isfield(result, 'eta_abc')
+    eta_abc = result.eta_abc;     % 尺寸: 2 x 2 x 2 x Nw
+end
 
 %% 6) 作图示例（可按你的单位制继续调整缩放因子）
-plot_response_tensor(Eph_list, sigma_abc, 1e5, 'Shift Current \sigma_{abc}');
-plot_response_tensor(Eph_list, eta_abc, 1e-8, 'MIC Metric \eta_{abc}');
+if ~isempty(sigma_abc)
+    plot_response_tensor(Eph_list, sigma_abc, 1e5, 'Shift Current \sigma_{abc}');
+end
+if ~isempty(eta_abc)
+    plot_response_tensor(Eph_list, eta_abc, 1e-8, 'MIC Metric \eta_{abc}');
+end
 
 %% 7) 保存结果（建议保留 out_nlc，便于后续排查数值细节）
 % save('nonlinear_conductivity_result.mat', ...
 %     'Eph_list', 'sigma_abc', 'eta_abc', 'Ef', 'kT', 'eta', ...
-%     'run_opts', 'out_nlc', '-v7.3');
+%     'run_opts', '-v7.3');
 
 function plot_response_tensor(Eph_list, tensor_abcw, scale_factor, fig_title)
 %PLOT_RESPONSE_TENSOR 将 2x2x2xNw 张量分量全部画在同一张图上。

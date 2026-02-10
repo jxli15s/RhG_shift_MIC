@@ -35,6 +35,7 @@ function [sigma_abc, out] = shift_current_plane_fd_energy_skew_fromUE( ...
     verbose = tbNLC.get_opt(opts, 'verbose', true);
     g_s = tbNLC.get_opt(opts, 'g_s', 1);
     doGaugeFix = tbNLC.get_opt(opts, 'doGaugeFix', true);
+    saveIntermediates = tbNLC.get_opt(opts, 'saveIntermediates', true);
 
     % -------------------- constants --------------------
     e_charge = 1.602176634e-19;
@@ -215,20 +216,25 @@ function [sigma_abc, out] = shift_current_plane_fd_energy_skew_fromUE( ...
     end
 
     % -------------------- outputs --------------------
-    out = struct();
-    out.E = E;
-    out.Ug = Ug;
-    out.A_diag = A_diag;
-    out.r_mn = r_mn;
-    out.dr = dr;
-    out.r_cov = r_cov;
-    out.dk1 = ops.dk1;
-    out.dk2 = ops.dk2;
-    out.J = ops.J;
-    out.invJT = ops.invJT;
-    out.w_k = ops.w_k;
-    out.pref = pref;
-    out.ix_list = ix_list;
-    out.iy_list = iy_list;
-    out.band_list = band_list;
+    if nargout > 1
+        out = struct();
+        out.dk1 = ops.dk1;
+        out.dk2 = ops.dk2;
+        out.J = ops.J;
+        out.invJT = ops.invJT;
+        out.w_k = ops.w_k;
+        out.pref = pref;
+        out.ix_list = ix_list;
+        out.iy_list = iy_list;
+        out.band_list = band_list;
+
+        if saveIntermediates
+            out.E = E;
+            out.Ug = Ug;
+            out.A_diag = A_diag;
+            out.r_mn = r_mn;
+            out.dr = dr;
+            out.r_cov = r_cov;
+        end
+    end
 end

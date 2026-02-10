@@ -35,6 +35,7 @@ function [eta_abc, out] = mic_metric_plane_fromUE_mn( ...
     verbose = tbNLC.get_opt(opts, 'verbose', true);
     positiveDE = tbNLC.get_opt(opts, 'positiveDE', true);
     saveFullMN = tbNLC.get_opt(opts, 'saveFullMN', true);
+    saveIntermediates = tbNLC.get_opt(opts, 'saveIntermediates', true);
 
     % -------------------- constants (SI) --------------------
     e_charge = 1.602176634e-19;
@@ -201,26 +202,31 @@ function [eta_abc, out] = mic_metric_plane_fromUE_mn( ...
     end
 
     % -------------------- outputs --------------------
-    out = struct();
-    out.pref = pref;
-    out.vel_pref = vel_pref;
-    out.w_k = ops.w_k;
-    out.J = ops.J;
-    out.invJT = ops.invJT;
-    out.dk1 = ops.dk1;
-    out.dk2 = ops.dk2;
-    out.mask_k = ops.mask_k;
-    out.mask_off = off;
-    out.positiveDE = positiveDE;
-    out.Ug = Ug;
-    out.band_list = band_list;
+    if nargout > 1
+        out = struct();
+        out.pref = pref;
+        out.vel_pref = vel_pref;
+        out.w_k = ops.w_k;
+        out.J = ops.J;
+        out.invJT = ops.invJT;
+        out.dk1 = ops.dk1;
+        out.dk2 = ops.dk2;
+        out.mask_k = ops.mask_k;
+        out.mask_off = off;
+        out.positiveDE = positiveDE;
+        out.band_list = band_list;
 
-    if saveFullMN
-        out.r_mn = r_mn_H;
-        out.g2 = g2;
-        out.dE_mn = dE_mn;
-        out.f_nm = f_nm;
-        out.v_band = v_band;
-        out.dv_mn = dv_mn;
+        if saveIntermediates
+            out.Ug = Ug;
+        end
+
+        if saveFullMN
+            out.r_mn = r_mn_H;
+            out.g2 = g2;
+            out.dE_mn = dE_mn;
+            out.f_nm = f_nm;
+            out.v_band = v_band;
+            out.dv_mn = dv_mn;
+        end
     end
 end

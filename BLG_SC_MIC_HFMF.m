@@ -10,7 +10,8 @@ is_cluster = true;
 save_figures = true;
 save_results = true;
 plot_each_block = true;      % true 时额外输出每个 valley block 的曲线
-use_parfor_over_blocks = false; % 4 个 block 并行（内存充足时可开）
+% 环境变量控制: USE_PARFOR_BLOCKS=1 -> 4 个 block 并行（内存充足时可开）
+use_parfor_over_blocks = strcmp(getenv('USE_PARFOR_BLOCKS'), '1');
 
 % HFMF 输出文件（按需修改）
 hfmf_mat_file = "/Volumes/T9/work/code/python/chiho_hfmf/HF_share/test/result/dsweep_251125/er=27.0_alp=0.030/SOC=0.00_fill=-1_LAFz_5.0_5.0_-5.0_-5.0_SOC_single_c3_spinless/matlab_data/ne=0.0000e12_U=14.000data.mat";
@@ -127,6 +128,7 @@ sigma_opts.symBC = true;
 sigma_opts.verbose = false;
 sigma_opts.doGaugeFix = true;
 sigma_opts.g_s = 1;
+sigma_opts.saveIntermediates = false;
 
 mic_opts = struct();
 mic_opts.band_list = 1:2;
@@ -136,6 +138,7 @@ mic_opts.verbose = false;
 mic_opts.doGaugeFix = true;
 mic_opts.g_s = 1;
 mic_opts.positiveDE = true;
+mic_opts.saveIntermediates = false;
 mic_opts.saveFullMN = false;
 
 run_opts = struct();
@@ -146,18 +149,17 @@ run_opts.mic_opts = mic_opts;
 
 %% 7) 对每个 valley block 分别计算，再求和
 resp_blocks = cell(1, nblock);
-out_blocks = cell(1, nblock);
 
 tic;
 if use_parfor_over_blocks
     parfor ib = 1:nblock
-        [resp_blocks{ib}, out_blocks{ib}] = tbNLC.compute_nonlinear_conductivity_fromUE( ...
+        resp_blocks{ib} = tbNLC.compute_nonlinear_conductivity_fromUE( ...
             Kx, Ky, U_blocks{ib}, E_blocks{ib}, Eph_list, Ef, kT, eta, run_opts);
     end
 else
     for ib = 1:nblock
         fprintf('Compute block %d/%d: %s\n', ib, nblock, block_names{ib});
-        [resp_blocks{ib}, out_blocks{ib}] = tbNLC.compute_nonlinear_conductivity_fromUE( ...
+        resp_blocks{ib} = tbNLC.compute_nonlinear_conductivity_fromUE( ...
             Kx, Ky, U_blocks{ib}, E_blocks{ib}, Eph_list, Ef, kT, eta, run_opts);
     end
 end
@@ -231,7 +233,7 @@ if save_results
         'dopts', 'sigma_opts', 'mic_opts', 'run_opts', ...
         'sigma_blocks', 'eta_blocks', ...
         'sigma_abc', 'eta_abc', 'sigma_K', 'sigma_Kp', 'eta_K', 'eta_Kp', ...
-        'out_blocks', '-v7.3');
+        '-v7.3');
 end
 
 function tensor_sum = sum_tensor_blocks(tensor_blocks)
@@ -288,4 +290,3 @@ function plot_response_tensor(Eph_list, tensor_abcw, scale_factor, fig_title, ..
         close(fig);
     end
 end
-

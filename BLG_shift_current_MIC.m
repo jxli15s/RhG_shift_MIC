@@ -94,7 +94,7 @@ toc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %     Get the 3D band in plane   %     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-knum=2000;
+knum=200;
 kxline=[-0.03,0.03];
 kyline=[-0.03,0.03];
 [Kx,Ky,Kz] = g.get_Bulk2Dkmesh(kxline,kyline,knum);
@@ -131,11 +131,12 @@ opts.verbose     = true;
 opts.useEmbedding = false;
 opts.doGaugeFix = true;
 opts.g_s = 1;
+opts.saveIntermediates = false;
 
 % opts.tau = [0,0,0];
 
 % [sigma_abc, out] = shift_current_plane_fd_energy_skew( Kx, Ky, Kz, pars, model, Eph_list, Ef, kT, eta, opts);
-[sigma_abc,out] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
+[sigma_abc, out] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %     Calculate the shift current by Ham from HFMF  %     
@@ -182,13 +183,14 @@ opts.verbose     = true;
 opts.useEmbedding = false;
 opts.doGaugeFix = true;
 opts.g_s = 1;
+opts.saveIntermediates = false;
 
 
 tic;
-[sigma_abc1,out1] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts); % spin up
-% [sigma_abc2,out2] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts); % spin up
-% [sigma_abc3,out3] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts); % spin dn
-% [sigma_abc4,out4] = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts); % spin dn
+sigma_abc1 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts); % spin up
+% sigma_abc2 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts); % spin up
+% sigma_abc3 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts); % spin dn
+% sigma_abc4 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts); % spin dn
 toc;
 %%
 % sigma_abc=sigma_abc1+sigma_abc2+sigma_abc3+sigma_abc4;
@@ -227,8 +229,10 @@ opts.verbose     = true;
 opts.useEmbedding = false;
 opts.doGaugeFix = true;
 opts.g_s = 1;
+opts.saveIntermediates = false;
+opts.saveFullMN = false;
 %%
-[eta_abc, out] = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
+eta_abc = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
 %% 
 % [eta_abc, out] = mic_metric_plane_fromUE_mn_unified(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
 %%
@@ -290,12 +294,14 @@ opts.verbose     = true;
 opts.useEmbedding = false;
 opts.doGaugeFix = true;
 opts.g_s = 1;
+opts.saveIntermediates = false;
+opts.saveFullMN = false;
 %%
 tic;
-[eta_abc1, out1] = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts);
-[eta_abc2, out2] = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts);
-[eta_abc3, out3] = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts);
-[eta_abc4, out4] = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts);
+eta_abc1 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts);
+eta_abc2 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts);
+eta_abc3 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts);
+eta_abc4 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts);
 toc;
 
 %%
