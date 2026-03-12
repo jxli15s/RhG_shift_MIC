@@ -16,6 +16,18 @@
 *.log
 *.mat
 outputs_hfmf/
+results/
+figs/
+symmetry_plots/
+
+# Local analysis artifacts
+U_*.png
+TaIrTe4-2dband_wannier90.png
+RhG_E_diff_HFMF_longx.svg
+energy_vs_U_*_seed.dat
+BLG_SC_figs.m
+Rhg_figs.m
+slanCM.m
 
 # Python local env/cache
 .venv/
