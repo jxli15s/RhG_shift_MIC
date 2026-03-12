@@ -6,6 +6,7 @@ function [U, E] = diag_mesh_fromHk(Hk, opts)
 % 输入:
 %   Hk: nb x nb x Nkx x Nky, 每个 k 点的哈密顿量
 %   opts.band_list (可选): 指定保留的能带索引（按升序本征值排序后）
+%   opts.useParfor (可选): true/false, 是否在该函数内部使用 parfor (default=true)
 %
 % 输出:
 %   U: nb x nb_sel x Nkx x Nky
@@ -27,27 +28,47 @@ function [U, E] = diag_mesh_fromHk(Hk, opts)
     else
         band_list = 1:nb;
     end
+    if isfield(opts, 'useParfor') && ~isempty(opts.useParfor)
+        useParfor = logical(opts.useParfor);
+    else
+        useParfor = true;
+    end
     nb_sel = numel(band_list);
 
     itotal = Nkx * Nky;
     Utmp = zeros(nb, nb_sel, itotal, 'like', Hk);
     Etmp = zeros(itotal, nb_sel);
 
-    parfor ll = 1:itotal
-        [ix, iy] = ind2sub([Nkx, Nky], ll);
-        H = Hk(:,:,ix,iy);
-        H = (H + H') / 2;
+    if useParfor
+        parfor ll = 1:itotal
+            [ix, iy] = ind2sub([Nkx, Nky], ll);
+            H = Hk(:,:,ix,iy);
+            H = (H + H') / 2;
 
-        [V, D] = eig(H);
-        evals = real(diag(D));
-        [evals, ind] = sort(evals, 'ascend');
-        V = V(:, ind);
+            [V, D] = eig(H);
+            evals = real(diag(D));
+            [evals, ind] = sort(evals, 'ascend');
+            V = V(:, ind);
 
-        Etmp(ll,:) = evals(band_list);
-        Utmp(:,:,ll) = V(:, band_list);
+            Etmp(ll,:) = evals(band_list);
+            Utmp(:,:,ll) = V(:, band_list);
+        end
+    else
+        for ll = 1:itotal
+            [ix, iy] = ind2sub([Nkx, Nky], ll);
+            H = Hk(:,:,ix,iy);
+            H = (H + H') / 2;
+
+            [V, D] = eig(H);
+            evals = real(diag(D));
+            [evals, ind] = sort(evals, 'ascend');
+            V = V(:, ind);
+
+            Etmp(ll,:) = evals(band_list);
+            Utmp(:,:,ll) = V(:, band_list);
+        end
     end
 
     U = reshape(Utmp, [nb, nb_sel, Nkx, Nky]);
     E = reshape(Etmp, [Nkx, Nky, nb_sel]);
 end
-

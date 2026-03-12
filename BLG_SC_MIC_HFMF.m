@@ -34,7 +34,7 @@ if ~isempty(p)
     delete(p);
 end
 try
-    parpool('local', 6);
+    parpool("Threads", 8);
 catch ME
     warning('parpool not started (%s). Continue in serial mode.', ME.message);
 end

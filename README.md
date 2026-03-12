@@ -50,6 +50,16 @@ Saved `.npz` fields include:
 - `eta_mic_u` (unless `--disable-mic`)
 - `Kx`, `Ky`, `Eph_list`, `U_list`, `success_mask`, `Ef_list`
 
+Single-U simple script:
+
+```bash
+python scripts/hfmf_single_u.py \
+  --hfmf-file "/path/to/ne=0.0000e12_U=14.000data.mat" \
+  --u-value 14 \
+  --band-list 1,2 \
+  --output /Users/jxli/work/tb/RhG_shift_MIC/outputs_py/single_u14.npz
+```
+
 ## Data policy
 
 Large local datasets are intentionally **not tracked** in this repository.

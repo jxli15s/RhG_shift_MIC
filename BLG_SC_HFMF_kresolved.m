@@ -2,87 +2,52 @@ clc;
 clear;
 
 %% 0) User setup (fixed U)
-% 固定 U 的 HFMF 文件参数
-U_fix = 14.0;
+U_fix = 0.0;
 ne_tag = "0.0000e12";
 
-% HFMF 输出目录（按需修改）
+% HFMF 数据目录（按需修改）
 hfmf_data_dir = "/Volumes/T9/work/code/python/chiho_hfmf/HF_share/test/result/dsweep_251125/er=27.0_alp=0.030/SOC=0.00_fill=-1_LAFz_5.0_5.0_-5.0_-5.0_SOC_single_c3_spinless/matlab_data";
-env_u = getenv('U_FIX');
-if ~isempty(env_u)
-    U_try = str2double(env_u);
-    if ~isnan(U_try)
-        U_fix = U_try;
-    end
-end
 hfmf_file = fullfile(hfmf_data_dir, sprintf("ne=%s_U=%.3fdata.mat", ne_tag, U_fix));
-env_hfile = getenv('HFMF_FILE');
-if ~isempty(env_hfile)
-    hfmf_file = string(env_hfile);
-end
+
 
 % 计算设置
-Eph_list = linspace(0.0, 0.1, 5000);
+Eph_list = linspace(0.0, 0.1, 2000);
 kT = 0.0;
-eta = 5e-4;
-env_nw = getenv('EPH_NW');
-if ~isempty(env_nw)
-    nw_try = round(str2double(env_nw));
-    if ~isnan(nw_try) && nw_try > 1
-        Eph_list = linspace(0.0, 0.1, nw_try);
-    end
-end
+eta = 1e-4;
 
-% 只分析部分 valley 时可改这里，例如 {'K_up'}
+
+% block 选择（默认四个全算）
 block_names_run = {'K_up', 'Kp_up', 'K_dn', 'Kp_dn'};
-env_blocks = getenv('BLOCKS_RUN'); % 例如: K_up,K_dn
-if ~isempty(env_blocks)
-    block_names_run = cellstr(strtrim(split(string(env_blocks), ',')))';
-    block_names_run = block_names_run(~cellfun(@isempty, block_names_run));
+
+
+%% 1) Output paths (single folder)
+result_dir = fullfile(pwd, 'results');
+if ~exist(result_dir, 'dir')
+    mkdir(result_dir);
 end
 
-% 可选: 对 H_int 的 k 网格做步长抽样（用于快速测试）
-k_stride = 1;
-env_stride = getenv('K_STRIDE');
-if ~isempty(env_stride)
-    stride_try = round(str2double(env_stride));
-    if ~isnan(stride_try) && stride_try >= 1
-        k_stride = stride_try;
-    end
-end
+u_tag_mat = sprintf('U_%.3f', U_fix);
+out_file = fullfile(result_dir, [u_tag_mat, '.mat']);
 
-% 输出目录
-run_tag = datestr(now, 'yyyymmdd_HHMMSS');
-out_dir = fullfile(pwd, 'outputs_hfmf', ['SC_kresolved_U', num2str(U_fix), '_', run_tag]);
-if ~exist(out_dir, 'dir')
-    mkdir(out_dir);
-end
-out_file = fullfile(out_dir, 'sc_kresolved.mat');
+u_tag_fig = strrep(sprintf('U_%3.0f', U_fix), ' ', '0');
+fig_png = fullfile(result_dir, [u_tag_fig, '.png']);
 
-%% 1) Parallel pool (optional)
+%% 2) Parallel pool (Threads)
 p = gcp('nocreate');
 if ~isempty(p)
     delete(p);
 end
 try
-    parpool('local', 6);
+    parpool("Threads", 6);
 catch ME
     warning('parpool not started (%s). Continue in serial mode.', ME.message);
 end
 
-%% 2) RhG geometry for K mesh
-g = MTB.geometry("RhG");
-a = 2.46; % Angstrom
-g.a = [ ...
-    1/2, -sqrt(3)/2, 0; ...
-    1/2,  sqrt(3)/2, 0; ...
-    0,    0,         1/a] * a;
-g.b = inv(g.a') * 2*pi;
-
-%% 3) Load HFMF Hamiltonian
+%% 3) RhG geometry and K mesh
 if ~isfile(hfmf_file)
     error('HFMF file not found: %s', hfmf_file);
 end
+
 S = load(hfmf_file, 'H_int', 'E_int');
 if ~isfield(S, 'H_int') || ~isfield(S, 'E_int')
     error('HFMF file must contain H_int and E_int.');
@@ -92,32 +57,35 @@ H_int = S.H_int / 1000; % meV -> eV
 E_int = S.E_int / 1000; % meV -> eV
 Ef = tbNLC.calculate_ef(E_int(:), 0.5);
 
-if k_stride > 1
-    H_int = H_int(1:k_stride:end, 1:k_stride:end, :, :);
-    fprintf('Apply k-stride downsampling: %d\n', k_stride);
-end
-
 [Nkx_data, Nky_data, dimH1, dimH2] = size(H_int);
-if dimH1 ~= dimH2
-    error('Invalid H_int shape: Nkx x Nky x Nh x Nh expected.');
-end
 
-% 与 HFMF 网格一致的 Kx/Ky
-knum = Nkx_data - 1; % get_Bulk2Dkmesh -> (knum+1)x(knum+1)
+
+g = MTB.geometry("RhG");
+a = 2.46; % Angstrom
+g.a = [ ...
+    1/2, -sqrt(3)/2, 0; ...
+    1/2,  sqrt(3)/2, 0; ...
+    0,    0,         1/a] * a;
+g.b = inv(g.a') * 2*pi;
+
+knum = Nkx_data - 1;
 kxline = [-0.15, 0.15] / (2*pi);
 kyline = [-0.15, 0.15] / (2*pi);
 [Kx, Ky, ~] = g.get_Bulk2Dkmesh(kxline, kyline, knum);
+
 if ~isequal(size(Kx), [Nkx_data, Nky_data])
     error('K-grid mismatch: size(Kx)=%s, H_int grid=%s', ...
         mat2str(size(Kx)), mat2str([Nkx_data, Nky_data]));
 end
 
-%% 4) Valley blocks + eigensystem
+%% 4) Per-block SC + out blocks
 H_blocks = tbNLC.extract_spinvalley_blocks(H_int, 1);
 
+% 对角化参数
 dopts = struct();
 dopts.band_list = 1:2;
 
+% Shift current 参数：这里明确开启中间量保存
 sc_opts = struct();
 sc_opts.band_list = 1:2;
 sc_opts.periodicFD = false;
@@ -126,64 +94,91 @@ sc_opts.symBC = true;
 sc_opts.verbose = false;
 sc_opts.doGaugeFix = true;
 sc_opts.g_s = 1;
+sc_opts.saveIntermediates = true;   % 关键：保存 out 内中间量
 
-% 核心: 保留 k 分辨中间量（体积较大）
-sc_opts.saveIntermediates = true;
-
-% 结果容器
 nblock = numel(block_names_run);
-sigma_blocks = cell(1, nblock);
-out_sc_blocks = cell(1, nblock);
-E_blocks = cell(1, nblock);
-
+Hk_blocks = cell(1, nblock);
 for ib = 1:nblock
     bname = block_names_run{ib};
     if ~isfield(H_blocks, bname)
         error('Unknown block name: %s', bname);
     end
-    fprintf('SC block %d/%d: %s\n', ib, nblock, bname);
-
-    Hk = permute(H_blocks.(bname), [3,4,1,2]);
-    [U_blk, E_blk] = tbNLC.diag_mesh_fromHk(Hk, dopts);
-    E_blocks{ib} = E_blk;
-    tic;
-    [sigma_blocks{ib}, out_sc_blocks{ib}] = tbNLC.shift_current_plane_fd_energy_skew_fromUE( ...
-        Kx, Ky, U_blk, E_blk, Eph_list, Ef, kT, eta, sc_opts);
-    toc;
+    Hk_blocks{ib} = permute(H_blocks.(bname), [3,4,1,2]);
 end
 
-%% 5) Sum over selected blocks
-sigma_abc = sum_tensor_blocks(sigma_blocks);
-%%
+U_blocks = cell(1, nblock);
+E_blocks = cell(1, nblock);
+sigma_blocks = cell(1, nblock);
+out_sc_blocks = cell(1, nblock);
 
-figure()
-hold on
-str=['x','y'];
-for i=1:2
-    for j=1:2
-        for k=1:2
-            sig_xxy = squeeze(sigma_abc(i,j,k,:))*10^6/10;
-            % sig_xxy = squeeze(sig_r(i,j,k,:))/10;
-            % sig_xxy = squeeze(sigma_C3v(i,j,k,:))*10^6/10/10^20;
-            plot(Eph_list, real(sig_xxy), '--','DisplayName',  sprintf('%s%s%s',str(i),str(j),str(k)));
-            legend
+for ib = 1:nblock
+    bname = block_names_run{ib};
+    fprintf('SC block %d/%d: %s\n', ib, nblock, bname);
+
+    Hk = Hk_blocks{ib};
+    [U_blk, E_blk] = tbNLC.diag_mesh_fromHk(Hk, dopts);
+
+    U_blocks{ib} = U_blk;
+    E_blocks{ib} = E_blk;
+
+    [sigma_blocks{ib}, out_sc_blocks{ib}] = tbNLC.shift_current_plane_fd_energy_skew_fromUE( ...
+        Kx, Ky, U_blk, E_blk, Eph_list, Ef, kT, eta, sc_opts);
+end
+
+%% 5) Symmetrize each block, then sum
+% sigma_blocks_sym = cell(1, nblock);
+sym_info_blocks = cell(1, nblock);
+for ib = 1:nblock
+    [sigma_blocks_sym{ib}, sym_info_blocks{ib}] = symmetrize_sigma_rank3( ...
+        sigma_blocks{ib}, 'C3v', 'mirror', 'Mx');
+end
+
+sigma_abc = sum_tensor_blocks(sigma_blocks);
+sigma_abc_sym = sum_tensor_blocks(sigma_blocks_sym);
+[sigma_C3v_from_sum, sym_info_from_sum] = symmetrize_sigma_rank3( ...
+    sigma_abc, 'C3v', 'mirror', 'Mx');
+
+%% 6) Plot
+%%
+fig = figure('Color', 'w');
+hold on;
+comp = ['x','y'];
+for ia = 1:2
+    for ib = 1:2
+        for ic = 1:2
+            % sig_curve = squeeze(sigma_abc(ia,ib,ic,:)) * 1e6 / 10;
+            sig_curve = squeeze(sigma_blocks_sym{2}(ia,ib,ic,:)) * 1e6 / 10;
+            plot(Eph_list, real(sig_curve), '--', ...
+                'DisplayName', sprintf('%s%s%s', comp(ia), comp(ib), comp(ic)));
         end
     end
 end
+xlabel('\hbar\omega (eV)');
+ylabel('\sigma_{abc} (scaled)');
+title(sprintf('Shift Current (block-wise C3v sym), U=%.3f', U_fix));
+legend('Location', 'best');
+grid on;
+box on;
 
-%% 6) Save (k-resolved intermediates kept)
-sigma_sum = sigma_abc; % backward-compatible save field
+exportgraphics(fig, fig_png, 'Resolution', 300);
+close(fig);
+
+%% 7) Save all results (including out_sc_blocks)
 save(out_file, ...
     'hfmf_file', 'U_fix', 'ne_tag', ...
     'Kx', 'Ky', 'Eph_list', 'Ef', 'kT', 'eta', ...
     'block_names_run', 'dopts', 'sc_opts', ...
-    'E_blocks', 'sigma_blocks', 'sigma_sum', 'out_sc_blocks', ...
+    'U_blocks', 'E_blocks', ...
+    'sigma_blocks', 'out_sc_blocks', ...
+    'sigma_blocks_sym', ...
+    'sigma_abc', 'sigma_abc_sym', ...
+    'sym_info_blocks', 'sigma_C3v_from_sum', 'sym_info_from_sum', ...
     '-v7.3');
 
-fprintf('\nSC k-resolved result saved:\n%s\n', out_file);
+fprintf('\nShift Current result saved:\n%s\n', out_file);
+fprintf('Figure saved:\n%s\n', fig_png);
 
 function tensor_sum = sum_tensor_blocks(tensor_blocks)
-% 对 cell 内 2x2x2xNw 张量求和。
     idx = find(~cellfun(@isempty, tensor_blocks), 1, 'first');
     if isempty(idx)
         tensor_sum = [];
@@ -194,5 +189,88 @@ function tensor_sum = sum_tensor_blocks(tensor_blocks)
         if ~isempty(tensor_blocks{ii})
             tensor_sum = tensor_sum + tensor_blocks{ii};
         end
+    end
+end
+
+function [sigma_sym, info] = symmetrize_sigma_rank3(sigma_abc, group, varargin)
+    p = inputParser;
+    addOptional(p, 'mirror', 'Mx');
+    parse(p, varargin{:});
+    mirrorOpt = p.Results.mirror;
+
+    R0 = eye(2);
+    R1 = rot2(2*pi/3);
+    R2 = rot2(4*pi/3);
+    M = mirror2(mirrorOpt);
+
+    switch lower(group)
+        case 'c3'
+            G = {R0, R1, R2};
+        case 'c3v'
+            G = {R0, R1, R2, M, M*R1, M*R2};
+        otherwise
+            error('Unknown group. Use ''C3'' or ''C3v''.');
+    end
+
+    sz = size(sigma_abc);
+    if numel(sz) == 3
+        sigma_abc = reshape(sigma_abc, 2,2,2,1);
+    end
+    Nw = size(sigma_abc,4);
+
+    sigma_sym = zeros(size(sigma_abc));
+    for iw = 1:Nw
+        S = sigma_abc(:,:,:,iw);
+        Sacc = zeros(2,2,2);
+        for ig = 1:numel(G)
+            Sacc = Sacc + apply_op_rank3(G{ig}, S);
+        end
+        sigma_sym(:,:,:,iw) = Sacc / numel(G);
+    end
+
+    diff = sigma_abc - sigma_sym;
+    info.norm_sigma = norm(sigma_abc(:));
+    info.norm_diff = norm(diff(:));
+    info.rel_error = info.norm_diff / max(info.norm_sigma, 1e-30);
+end
+
+function S2 = apply_op_rank3(R, S)
+    S2 = zeros(2,2,2);
+    for a = 1:2
+        for b = 1:2
+            for c = 1:2
+                tmp = 0;
+                for ap = 1:2
+                    for bp = 1:2
+                        for cp = 1:2
+                            tmp = tmp + R(a,ap)*R(b,bp)*R(c,cp)*S(ap,bp,cp);
+                        end
+                    end
+                end
+                S2(a,b,c) = tmp;
+            end
+        end
+    end
+end
+
+function R = rot2(theta)
+    R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
+end
+
+function M = mirror2(mirrorOpt)
+    if isnumeric(mirrorOpt)
+        phi = mirrorOpt;
+        Mx = [1 0; 0 -1];
+        M = rot2(phi) * Mx * rot2(-phi);
+        return;
+    end
+
+    switch lower(string(mirrorOpt))
+        case "mx"
+            M = [1 0; 0 -1];
+        case "my"
+            M = [-1 0; 0 1];
+        otherwise
+            error('mirror must be ''Mx'', ''My'', or numeric angle phi (rad).');
     end
 end

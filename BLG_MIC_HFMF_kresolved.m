@@ -26,9 +26,9 @@ if ~isempty(env_hfile)
 end
 
 % 计算设置
-Eph_list = linspace(0.0, 0.2, 5000);
+Eph_list = linspace(0.0, 0.1, 5000);
 kT = 0.0;
-eta = 5e-5;
+eta = 5e-4;
 env_nw = getenv('EPH_NW');
 if ~isempty(env_nw)
     nw_try = round(str2double(env_nw));
@@ -69,7 +69,7 @@ if ~isempty(p)
     delete(p);
 end
 try
-    parpool('local', 6);
+    parpool("Threads", 8);
 catch ME
     warning('parpool not started (%s). Continue in serial mode.', ME.message);
 end

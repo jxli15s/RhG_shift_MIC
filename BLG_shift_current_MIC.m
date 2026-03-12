@@ -94,7 +94,7 @@ toc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %     Get the 3D band in plane   %     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-knum=200;
+knum=300;
 kxline=[-0.03,0.03];
 kyline=[-0.03,0.03];
 [Kx,Ky,Kz] = g.get_Bulk2Dkmesh(kxline,kyline,knum);
@@ -141,14 +141,14 @@ opts.saveIntermediates = false;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %     Calculate the shift current by Ham from HFMF  %     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% S=load("/Volumes/T9/work/code/python/chiho_hfmf/HF_share/test/result/dsweep_251125/er=27.0_alp=0.030/SOC=0.00_fill=-1_LAFz_5.0_5.0_-5.0_-5.0_SOC_single_c3_spinless/matlab_data/ne=0.0000e12_U=14.000data.mat");
-S=load("/Volumes/T9/work/tb/matlab/data/RhG_HFMF/chiho/sequence/2001/ne=0.0000e12_U=0.000data.mat");
+S=load("/Volumes/T9/work/code/python/chiho_hfmf/HF_share/test/result/dsweep_251125/er=27.0_alp=0.030/SOC=0.00_fill=-1_LAFz_5.0_5.0_-5.0_-5.0_SOC_single_c3_spinless/matlab_data/ne=0.0000e12_U=8.000data.mat");
+% S=load("/Volumes/T9/work/tb/matlab/data/RhG_HFMF/chiho/sequence/2001/ne=0.0000e12_U=0.000data.mat");
 % S=load("/Volumes/T9/work/code/python/chiho_hfmf/HF_share/test/parallel/result/dsweep_251125/er=27.0_alp=0.030/SOC=0.00_fill=-1_LAFz_5.0_5.0_-5.0_-5.0_SOC_single_c3_spinless/matlab_data/ne=0.0000e12_U=6.000data.mat");
 H_int=S.H_int/1000;
 Ham_int=permute(H_int,[3,4,1,2]);
 E_int=S.E_int/1000;
 fermi=tbNLC.calculate_ef(E_int(:), 0.5);
-knum=2000;
+knum=300;
 kxline=[-0.15,0.15]/2/pi;
 kyline=[-0.15,0.15]/2/pi;
 [Kx,Ky,Kz] = g.get_Bulk2Dkmesh(kxline,kyline,knum);
@@ -158,12 +158,12 @@ dopts.band_list = 1:2; % or choose your relevant bands
 [H_blocks] = tbNLC.extract_spinvalley_blocks(H_int,1);
 
 [Unk1,Enk1] = tbNLC.diag_mesh_fromHk(permute(H_blocks.K_up,[3,4,1,2]), dopts);
-% [Unk2,Enk2] = tbNLC.diag_mesh_fromHk(permute(H_blocks.Kp_up,[3,4,1,2]), dopts);
-% [Unk3,Enk3] = tbNLC.diag_mesh_fromHk(permute(H_blocks.K_dn,[3,4,1,2]), dopts);
-% [Unk4,Enk4] = tbNLC.diag_mesh_fromHk(permute(H_blocks.Kp_dn,[3,4,1,2]), dopts);
+[Unk2,Enk2] = tbNLC.diag_mesh_fromHk(permute(H_blocks.Kp_up,[3,4,1,2]), dopts);
+[Unk3,Enk3] = tbNLC.diag_mesh_fromHk(permute(H_blocks.K_dn,[3,4,1,2]), dopts);
+[Unk4,Enk4] = tbNLC.diag_mesh_fromHk(permute(H_blocks.Kp_dn,[3,4,1,2]), dopts);
 %%
-% efermi=tbNLC.calculate_ef([Enk1(:);Enk2(:);Enk3(:);Enk4(:)],0.5);
-efermi=tbNLC.calculate_ef(Enk1(:),0.5);
+efermi=tbNLC.calculate_ef([Enk1(:);Enk2(:);Enk3(:);Enk4(:)],0.5);
+% efermi=tbNLC.calculate_ef(Enk1(:),0.5);
 %%
 % ===== photon energy grid (eV) =====
 Eph_list = linspace(0.0, 0.1, 1000);   % hbar*omega in eV
@@ -188,13 +188,18 @@ opts.saveIntermediates = false;
 
 tic;
 sigma_abc1 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts); % spin up
-% sigma_abc2 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts); % spin up
-% sigma_abc3 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts); % spin dn
-% sigma_abc4 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts); % spin dn
+sigma_abc2 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts); % spin up
+sigma_abc3 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts); % spin dn
+sigma_abc4 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts); % spin dn
 toc;
 %%
-% sigma_abc=sigma_abc1+sigma_abc2+sigma_abc3+sigma_abc4;
-sigma_abc=sigma_abc1
+sigma_abc=sigma_abc1+sigma_abc2+sigma_abc3+sigma_abc4;
+% sigma_abc=sigma_abc1
+%%
+[sigma_C3, infoC3] = symmetrize_sigma_rank3(sigma_abc, 'C3');
+% [sigma_C3v, infoC3v] = symmetrize_sigma_rank3(sigma_abc, 'C3v', 'Mx');
+[sigma_C3v, info] = symmetrize_sigma_rank3(sigma_abc, 'C3v', 'mirror', 'My');
+
 %%
 figure()
 hold on
@@ -202,7 +207,9 @@ str=['x','y'];
 for i=1:2
     for j=1:2
         for k=1:2
-            sig_xxy = squeeze(sigma_abc(i,j,k,:))*10^6/10;
+            % sig_xxy = squeeze(sigma_abc(i,j,k,:))*10^6/10;
+            % sig_xxy = squeeze(sigma_C3(i,j,k,:))*10^6/10;
+            sig_xxy = squeeze(sigma_C3v(i,j,k,:))*10^6/10;
             % sig_xxy = squeeze(sig_r(i,j,k,:))/10;
             % sig_xxy = squeeze(sigma_C3v(i,j,k,:))*10^6/10/10^20;
             plot(Eph_list, real(sig_xxy), '--','DisplayName',  sprintf('%s%s%s',str(i),str(j),str(k)));
@@ -221,7 +228,7 @@ eta = 0.001;      % eV (Lorentz broadening for delta(Em-En - Eph))
 
 % ===== options =====
 opts = struct();
-opts.band_list   = 2:3;  
+opts.band_list   = 1:2;  
 opts.periodicFD  = false;   % 推荐先 false：丢边界做中心差分（最稳）
 opts.trimBoundary= true;    % true -> 使用内部 (2..Nk-1)
 opts.symBC       = true;    % symmetrize b<->c
@@ -232,9 +239,21 @@ opts.g_s = 1;
 opts.saveIntermediates = false;
 opts.saveFullMN = false;
 %%
-eta_abc = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
+% eta_abc = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
+% eta_abc = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts);
+eta_abc1 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts);
+eta_abc2 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk2, Enk2, Eph_list, Ef, kT, eta, opts);
+eta_abc3 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk3, Enk3, Eph_list, Ef, kT, eta, opts);
+eta_abc4 = tbNLC.mic_metric_plane_fromUE_mn(Kx, Ky, Unk4, Enk4, Eph_list, Ef, kT, eta, opts);
+
+% sigma_abc1 = tbNLC.shift_current_plane_fd_energy_skew_fromUE(Kx, Ky, Unk1, Enk1, Eph_list, Ef, kT, eta, opts); % spin up
 %% 
 % [eta_abc, out] = mic_metric_plane_fromUE_mn_unified(Kx, Ky, Unk, Enk, Eph_list, Ef, kT, eta, opts);
+%%
+eta_abc=eta_abc1+eta_abc2+eta_abc3+eta_abc4;
+[eta_C3, infoC3] = symmetrize_sigma_rank3(eta_abc, 'C3');
+% [sigma_C3v, infoC3v] = symmetrize_sigma_rank3(sigma_abc, 'C3v', 'Mx');
+[eta_C3v, info] = symmetrize_sigma_rank3(eta_abc, 'C3v', 'mirror', 'Mx');
 %%
 figure()
 hold on
@@ -242,10 +261,14 @@ str=['x','y'];
 for i=1:2
     for j=1:2
         for k=1:2
-            sig_xxy = squeeze(eta_abc(i,j,k,:))*10^-13*10^6/10;
+            % sig_xxy = squeeze(eta_abc1(i,j,k,:))*10^-13*10^6/10;
+            % sig_xxy = squeeze(eta_abc2(i,j,k,:))*10^-13*10^6/10;
+            % sig_xxy = squeeze(eta_abc3(i,j,k,:))*10^-13*10^6/10;
+            sig_xxy = squeeze(eta_abc4(i,j,k,:))*10^-13*10^6/10;
+            % sig_xxy = squeeze(eta_C3v(i,j,k,:))*10^-14*10^6/10;
             % sig_xxy = squeeze(sigma_abc(i,j,k,:))*10^6/10;
             % sig_xxy = squeeze(sig_r(i,j,k,:))/10;
-            % sig_xxy = squeeze(sigma_C3v(i,j,k,:))*10^6/10/10^20;
+            % sig_xxy = squeeze(eta_C3v(i,j,k,:))*10^6/10/10^13;
             plot(Eph_list, real(sig_xxy), '--','DisplayName',  sprintf('%s%s%s',str(i),str(j),str(k)));
             legend
         end
@@ -1123,3 +1146,110 @@ function efermi = calculate_ef(Enk, u)
     occupied_states = ceil(total_states * u); % 填充的态数
     efermi = max(mink(Enk(:), occupied_states));
 end
+
+function [sigma_sym, info] = symmetrize_sigma_rank3(sigma_abc, group, varargin)
+%SYMMETRIZE_SIGMA_RANK3  Group-average (project) a 2D rank-3 tensor sigma^{abc}.
+%
+% Input:
+%   sigma_abc : 2x2x2xNw   (a,b,c in x,y; optional frequency axis)
+%   group     : 'C3' or 'C3v'
+%
+% Optional:
+%   mirror    : 'Mx' (default) or 'My' or angle phi (radians) for a general mirror axis
+%               - If numeric phi is given: mirror axis makes angle phi with +x.
+%
+% Output:
+%   sigma_sym : same size as sigma_abc
+%   info      : struct with symmetry error diagnostics
+
+    p = inputParser;
+    addOptional(p, 'mirror', 'Mx');
+    parse(p, varargin{:});
+    mirrorOpt = p.Results.mirror;
+
+    % rotation matrices
+    R0  = eye(2);
+    R1  = rot2(2*pi/3);
+    R2  = rot2(4*pi/3);
+
+    % mirror matrix
+    M = mirror2(mirrorOpt);
+
+    % build group elements (list of 2x2 matrices)
+    switch lower(group)
+        case 'c3'
+            G = {R0, R1, R2};
+        case 'c3v'
+            % {E, C3, C3^2, M, M C3, M C3^2}
+            G = {R0, R1, R2, M, M*R1, M*R2};
+        otherwise
+            error('Unknown group. Use ''C3'' or ''C3v''.');
+    end
+
+    % ensure sigma has 4th dim Nw
+    sz = size(sigma_abc);
+    if numel(sz) == 3
+        sigma_abc = reshape(sigma_abc, 2,2,2,1);
+    end
+    Nw = size(sigma_abc,4);
+
+    sigma_sym = zeros(size(sigma_abc));
+    for iw = 1:Nw
+        S = sigma_abc(:,:,:,iw);
+        Sacc = zeros(2,2,2);
+        for ig = 1:numel(G)
+            Sacc = Sacc + apply_op_rank3(G{ig}, S);
+        end
+        sigma_sym(:,:,:,iw) = Sacc / numel(G);
+    end
+
+    % diagnostics: how far from symmetry subspace
+    diff = sigma_abc - sigma_sym;
+    info.norm_sigma = norm(sigma_abc(:));
+    info.norm_diff  = norm(diff(:));
+    info.rel_error  = info.norm_diff / max(info.norm_sigma, 1e-30);
+end
+
+function S2 = apply_op_rank3(R, S)
+% (R·S)^{abc} = R_{aa'} R_{bb'} R_{cc'} S^{a'b'c'}
+    S2 = zeros(2,2,2);
+    for a = 1:2
+        for b = 1:2
+            for c = 1:2
+                tmp = 0;
+                for ap = 1:2
+                    for bp = 1:2
+                        for cp = 1:2
+                            tmp = tmp + R(a,ap)*R(b,bp)*R(c,cp)*S(ap,bp,cp);
+                        end
+                    end
+                end
+                S2(a,b,c) = tmp;
+            end
+        end
+    end
+end
+
+function R = rot2(theta)
+    R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
+end
+
+function M = mirror2(mirrorOpt)
+    if isnumeric(mirrorOpt)
+        phi = mirrorOpt;
+        Mx = [1 0; 0 -1];
+        M  = rot2(phi) * Mx * rot2(-phi);
+        return;
+    end
+    switch lower(string(mirrorOpt))
+        case "mx"
+            % M = [1 0; 0 -1];
+            M = [-1, 0; 0, 1];
+        case "my"
+            M = [1 0; 0 -1];
+        otherwise
+            error('mirror must be ''Mx'',''My'', or numeric angle phi (rad).');
+    end
+end
+
+
